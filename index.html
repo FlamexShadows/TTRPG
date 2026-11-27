@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sparks of Dynasty — Virtual Tabletop</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="vtt-shell" class="vtt-shell">
+    <!-- Top Leather Command Bar: 4 Clean Menus + Turn/Undo -->
+    <header class="vtt-header">
+      <div class="vtt-brand">
+        <img src="assets/favicon.svg" alt="" width="26" height="26">
+        <div>
+          <h1>Sparks of Dynasty VTT</h1>
+          <small id="hdr-subtitle">Rust Engine · Ruined Chapel Ambush</small>
+        </div>
+      </div>
+
+      <nav class="vtt-nav" aria-label="Tabletop menus">
+        <button type="button" class="btn btn-dark btn-sm" popovertarget="menu-encounter" data-menu-btn="menu-encounter">Encounter ▾</button>
+        <button type="button" class="btn btn-dark btn-sm" popovertarget="menu-map" data-menu-btn="menu-map">Map ▾</button>
+        <button type="button" class="btn btn-dark btn-sm" popovertarget="menu-pov" data-menu-btn="menu-pov">POV &amp; Panels ▾</button>
+      </nav>
+
+      <div class="vtt-toolbar-group vtt-spacer">
+        <button type="button" class="btn btn-dark btn-sm" id="btn-toggle-left" aria-pressed="true" title="Show/hide Initiative panel">Init</button>
+        <button type="button" class="btn btn-dark btn-sm" id="btn-toggle-right" aria-pressed="true" title="Show/hide Inspector panel">Inspector</button>
+        <button type="button" class="btn btn-dark btn-sm" id="btn-undo" disabled>Undo</button>
+        <button type="button" class="btn btn-dark btn-sm" id="btn-redo" disabled>Redo</button>
+        <button type="button" class="btn btn-dark btn-sm" id="btn-rules-ref">Rules</button>
+      </div>
+
+      <input type="file" id="file-import-state" accept=".json,application/json" hidden>
+      <input type="file" id="file-import-char" accept=".json,application/json" hidden>
+    </header>
+
+    <!-- Popover Dropdown Menus -->
+    <div id="menu-encounter" popover="auto" class="vtt-menu">
+      <div class="menu-section">
+        <span class="menu-label">Sample Scenario</span>
+        <select id="scenario-select" class="vtt-input" aria-label="Load sample scenario">
+          <option value="chapel">Ruined Chapel Ambush (Lv 5)</option>
+          <option value="colossus">Sanctum of the Hydra (Lv 6 + Solo)</option>
+        </select>
+        <button type="button" class="btn btn-crimson btn-sm" id="btn-reset-scenario">Load / Reset Scenario</button>
+      </div>
+      <hr class="menu-sep">
+      <button type="button" class="menu-item" id="btn-rest-menu">Party Rest (Partial / Full)</button>
+      <button type="button" class="menu-item" id="btn-char-import">Import PC (Character Sheet JSON)</button>
+      <button type="button" class="menu-item" id="btn-export-state">Export Encounter JSON</button>
+      <button type="button" class="menu-item" id="btn-import-state">Load Encounter JSON</button>
+    </div>
+
+    <div id="menu-map" popover="auto" class="vtt-menu">
+      <button type="button" class="menu-item" id="btn-map-import">Import Image or .dd2vtt / .uvtt…</button>
+      <button type="button" class="menu-item" id="btn-calibrate-from-menu">Calibrate 1-Square Grid</button>
+      <hr class="menu-sep">
+      <div class="menu-section">
+        <span class="menu-label">Ambient Lighting</span>
+        <div class="row">
+          <button type="button" class="btn btn-xs" id="btn-ambient-bright" style="flex:1">Bright</button>
+          <button type="button" class="btn btn-xs" id="btn-ambient-dark" style="flex:1">Dungeon Darkness</button>
+        </div>
+      </div>
+      <hr class="menu-sep">
+      <label class="menu-check"><input type="checkbox" id="chk-show-grid" checked> Show 1 m Grid</label>
+      <label class="menu-check"><input type="checkbox" id="chk-show-lights" checked> Show Light Halos</label>
+    </div>
+
+    <div id="menu-pov" popover="auto" class="vtt-menu">
+      <div class="menu-section">
+        <span class="menu-label">Battlemap Perspective (POV)</span>
+        <button type="button" class="menu-item" data-pov-mode="dm">DM View (See All)</button>
+        <button type="button" class="menu-item" data-pov-mode="player">Player POV (Combined Party Sight)</button>
+        <label class="menu-label" for="pov-token-select" style="margin-top:4px">Specific Token POV</label>
+        <select id="pov-token-select" class="vtt-input" aria-label="View map from specific token"></select>
+      </div>
+      <hr class="menu-sep">
+      <div class="menu-section">
+        <span class="menu-label">Panels on Screen</span>
+        <label class="menu-check"><input type="checkbox" id="chk-panel-left" checked> Initiative &amp; Budget</label>
+        <label class="menu-check"><input type="checkbox" id="chk-panel-right" checked> Token &amp; Monster Inspector</label>
+        <label class="menu-check"><input type="checkbox" id="chk-panel-dock" checked> Bottom Action Dock</label>
+      </div>
+    </div>
+
+    <div id="menu-aoe" popover="auto" class="vtt-menu">
+      <button type="button" class="menu-item" data-tool="template-circle">Circle AoE (Radius)</button>
+      <button type="button" class="menu-item" data-tool="template-cone">Cone AoE</button>
+      <button type="button" class="menu-item" data-tool="template-line">Line AoE</button>
+    </div>
+
+    <div id="menu-edit-map" popover="auto" class="vtt-menu">
+      <button type="button" class="menu-item" data-tool="wall">Wall Brush (Click Edge)</button>
+      <button type="button" class="menu-item" data-tool="terrain">Difficult Terrain (2m/1m)</button>
+      <button type="button" class="menu-item" data-tool="light">Place / Remove Torch Light</button>
+      <button type="button" class="menu-item" data-tool="darkness">True Darkness Tile</button>
+    </div>
+
+    <!-- Left Rail: Initiative, Turn Clock & Encounter Budget -->
+    <aside id="rail-left" class="vtt-rail vtt-rail-left" aria-label="Initiative and encounter tracker">
+      <div class="rail-head">
+        <div class="rail-title-row">
+          <h2 class="rail-title">Initiative</h2>
+          <div class="row" style="gap:4px">
+            <span id="combat-status-pill" class="pill">Exploration</span>
+            <span id="round-clock" class="pill gold">Round 1 · 0:00</span>
+            <button type="button" class="chip-close" id="btn-collapse-left" title="Collapse Initiative" aria-label="Collapse Initiative">◂</button>
+          </div>
+        </div>
+        <div class="row" id="gm-combat-controls">
+          <button type="button" class="btn btn-crimson btn-sm" id="btn-toggle-combat" aria-pressed="false" style="flex:1">Start Combat</button>
+          <button type="button" class="btn btn-sm" id="btn-next-turn" disabled>Next ▸</button>
+          <button type="button" class="btn btn-sm" id="btn-roll-init" title="Reroll initiative for all tokens" disabled>Reroll</button>
+        </div>
+        <div id="encounter-budget" class="budget-bar"></div>
+      </div>
+      <div class="rail-scroll">
+        <ul id="init-list" class="init-list"></ul>
+      </div>
+    </aside>
+
+    <!-- Center: Interactive Tactical Map Canvas -->
+    <main class="vtt-center" aria-label="Tactical battlemap">
+      <div class="map-hud-top">
+        <div class="hud-slot">
+          <div class="hud-bar" id="hud-tools" role="toolbar" aria-label="Map tools">
+            <button type="button" class="btn btn-dark btn-xs" data-tool="select" aria-pressed="true">Select / Move</button>
+            <button type="button" class="btn btn-dark btn-xs" data-tool="measure" aria-pressed="false">Ruler</button>
+            <button type="button" class="btn btn-dark btn-xs" id="btn-aoe-menu" popovertarget="menu-aoe" data-menu-btn="menu-aoe">AoE ▾</button>
+            <button type="button" class="btn btn-dark btn-xs" id="btn-edit-menu" popovertarget="menu-edit-map" data-menu-btn="menu-edit-map">Edit ▾</button>
+            <button type="button" class="btn btn-dark btn-xs" data-tool="pan" aria-pressed="false">Pan</button>
+            <button type="button" class="chip-close" id="btn-collapse-tools" title="Collapse map tools" aria-label="Collapse map tools">▴</button>
+          </div>
+          <button type="button" class="glass-chip" id="btn-reopen-tools" hidden>Tools <span class="tri" aria-hidden="true">▾</span></button>
+        </div>
+
+        <div class="hud-slot">
+          <div class="hud-bar" id="hud-view">
+            <div class="pov-seg" role="group" aria-label="Quick POV switch">
+              <button type="button" class="btn btn-dark btn-xs" data-pov-mode="dm" aria-pressed="true">DM</button>
+              <button type="button" class="btn btn-dark btn-xs" data-pov-mode="player" aria-pressed="false">Player</button>
+              <button type="button" class="btn btn-dark btn-xs" id="btn-pov-token-pill" popovertarget="menu-pov" data-menu-btn="menu-pov">Token ▾</button>
+            </div>
+            <button type="button" class="btn btn-dark btn-xs" id="btn-zoom-out" aria-label="Zoom out">−</button>
+            <span id="zoom-readout" class="mono" style="color:#fbf0cb">100%</span>
+            <button type="button" class="btn btn-dark btn-xs" id="btn-zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" class="btn btn-dark btn-xs" id="btn-zoom-fit">Fit</button>
+            <button type="button" class="chip-close" id="btn-collapse-view" title="Collapse view &amp; zoom" aria-label="Collapse view and zoom">▴</button>
+          </div>
+          <button type="button" class="glass-chip" id="btn-reopen-view" hidden><span id="reopen-view-label">DM · 100%</span> <span class="tri" aria-hidden="true">▾</span></button>
+        </div>
+      </div>
+
+      <!-- Collapsed Edge Chips (shown when Left/Right Side Panels are collapsed) -->
+      <div class="edge-chip-dock edge-chip-left" id="reopen-left">
+        <button type="button" class="glass-chip" id="btn-reopen-left" aria-label="Expand Initiative panel">Initiative <span class="tri" aria-hidden="true">▸</span></button>
+      </div>
+      <div class="edge-chip-dock edge-chip-right" id="reopen-right">
+        <button type="button" class="glass-chip" data-open-drawer="sheet"><span class="tri" aria-hidden="true">◂</span> Sheet</button>
+        <button type="button" class="glass-chip" data-open-drawer="monsters"><span class="tri" aria-hidden="true">◂</span> Monsters</button>
+        <button type="button" class="glass-chip" data-open-drawer="log"><span class="tri" aria-hidden="true">◂</span> Chat &amp; Log</button>
+      </div>
+
+      <div id="pov-banner" class="pov-banner" hidden>
+        <span id="pov-banner-text">Viewing as Player POV</span>
+        <button type="button" class="btn btn-dark btn-xs" id="btn-return-dm">Return to DM View</button>
+      </div>
+
+      <div id="targeting-banner" class="targeting-banner" hidden>
+        <span id="targeting-text">Click a target on the map…</span>
+        <button type="button" class="btn btn-dark btn-xs" id="btn-cancel-target">Cancel</button>
+      </div>
+
+      <canvas id="map-canvas" class="map-canvas" tabindex="0" aria-label="Tactical grid map. Use mouse to select, drag tokens, pan, and zoom."></canvas>
+
+      <div class="map-hud-bottom">
+        <div id="action-dock" class="action-dock" aria-label="Active turn actions"></div>
+      </div>
+    </main>
+
+    <!-- Right Rail: Sheet, Monster Compendium & Log/Dice -->
+    <aside id="rail-right" class="vtt-rail vtt-rail-right" aria-label="Token inspector, monsters, and combat log">
+      <div class="drawer-tabs" role="tablist" aria-label="Inspector panels">
+        <button type="button" role="tab" class="drawer-tab" data-drawer="sheet" aria-selected="true">Sheet <span class="tri" aria-hidden="true">▸</span></button>
+        <button type="button" role="tab" class="drawer-tab" data-drawer="monsters" aria-selected="false">Monsters <span class="tri" aria-hidden="true">◂</span></button>
+        <button type="button" role="tab" class="drawer-tab" data-drawer="log" aria-selected="false">Chat &amp; Log <span class="tri" aria-hidden="true">◂</span></button>
+        <button type="button" class="chip-close" id="btn-collapse-right" title="Collapse Inspector" aria-label="Collapse Inspector">▸</button>
+      </div>
+      <div id="drawer-sheet" class="rail-scroll" role="tabpanel"></div>
+      <div id="drawer-monsters" class="rail-scroll" role="tabpanel" hidden></div>
+      <div id="drawer-log" class="rail-scroll" role="tabpanel" hidden></div>
+    </aside>
+  </div>
+
+  <!-- Native Modal Dialogs -->
+  <dialog id="dlg-confirm" class="vtt-dialog" closedby="any" aria-labelledby="dlg-confirm-title">
+    <h1 id="dlg-confirm-title">Confirm Resolution</h1>
+    <div id="dlg-confirm-body"></div>
+    <form method="dialog" class="dialog-actions" id="dlg-confirm-form">
+      <button type="submit" value="cancel" class="btn">Cancel</button>
+      <button type="button" id="dlg-confirm-apply" class="btn btn-crimson" autofocus>Confirm &amp; Apply</button>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-map" class="vtt-dialog" closedby="any" aria-labelledby="dlg-map-title">
+    <h1 id="dlg-map-title">Import Map or Universal VTT (.dd2vtt / .uvtt)</h1>
+    <div id="dlg-map-body">
+      <p class="muted">Import a PNG/JPG/WebP battlemap image and drag 1 square on the canvas to calibrate the 1-meter grid, or import a <code>.dd2vtt</code> / <code>.uvtt</code> file with embedded walls, doors, and lights.</p>
+      <div class="confirm-grid">
+        <label>Map Image (PNG/JPG/WebP)<input type="file" id="in-map-img" accept="image/*" class="vtt-input"></label>
+        <label>Universal VTT (.dd2vtt / .uvtt)<input type="file" id="in-map-dd2vtt" accept=".dd2vtt,.uvtt,.json" class="vtt-input"></label>
+      </div>
+      <div class="confirm-grid">
+        <label>Grid Width (meters)<input type="number" id="in-map-cols" value="24" min="8" max="100" class="vtt-input"></label>
+        <label>Grid Height (meters)<input type="number" id="in-map-rows" value="18" min="8" max="100" class="vtt-input"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="btn btn-sm" id="btn-calibrate-grid">Calibrate 1 Square on Image</button>
+        <button type="button" class="btn btn-sm" id="btn-clear-map-img">Use Procedural Map</button>
+      </div>
+    </div>
+    <form method="dialog" class="dialog-actions">
+      <button type="submit" value="close" class="btn">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-rest" class="vtt-dialog" closedby="any" aria-labelledby="dlg-rest-title">
+    <h1 id="dlg-rest-title">Party Rest</h1>
+    <p>Choose a rest duration for all party tokens:</p>
+    <div class="confirm-box">
+      <p><strong>Partial Rest (8 hours):</strong> Restores Mana and Stamina equal to level, Physical Armor equal to Fortitude score, Magical Armor equal to Intelligence score, and clears <em>Tired</em>.</p>
+      <p style="margin-top:6px"><strong>Full Rest (24 hours):</strong> Restores Health, Mana, Stamina, and all Armor pools to maximum, clears <em>Exhausted</em> and <em>Dying</em>, and refreshes per-full-rest features.</p>
+    </div>
+    <form method="dialog" class="dialog-actions">
+      <button type="submit" value="cancel" class="btn">Cancel</button>
+      <button type="button" id="btn-do-partial-rest" class="btn">Partial Rest (8h)</button>
+      <button type="button" id="btn-do-full-rest" class="btn btn-crimson">Full Rest (24h)</button>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-rules" class="vtt-dialog" closedby="any" aria-labelledby="dlg-rules-title">
+    <h1 id="dlg-rules-title">Sparks Quick Reference</h1>
+    <div class="confirm-box" style="display:flex;flex-direction:column;gap:8px;font-size:0.9rem">
+      <div><strong>6 AP Economy:</strong> Gain 6 AP at turn start (+1 Hastened, −1 Slowed, max 2 Freezing, 0 Paralyzed/Petrified/Stunned/Unconscious/Dying). Unspent AP is lost at turn end.</div>
+      <div><strong>Movement:</strong> 1 AP adds Speed meters to your Move Pool for the turn. Difficult terrain costs 2 m per 1 m. Hold <code>Shift</code> while dragging to reposition freely.</div>
+      <div><strong>Critical &amp; Decisive Strikes:</strong> Physical attacks roll d100 ≤ Critical Chance (Wits score) for ×2 dice. A roll in the Decisive Range (20, widened by Deadly) is an automatic Critical and rolls d100 ≤ Crit Chance for Decisive (×3 dice + Crippled).</div>
+      <div><strong>Damage Order:</strong> Immunity → Vulnerability (×2) → Resistance (minus Enchanted ×5; Vorpal/Piercing ignore physical res/imm) → Armor (Physical → PA; Elemental/Psychic → MA; Holy vs Evil / Unholy vs Good / Magic vs Neutral / True → TA then HP; Monsters use single AV).</div>
+      <div><strong>Vision &amp; POV:</strong> Normal needs light in darkness; Dark Sight sees through darkness; Blind Sight perceives within 10 m; True Vision pierces True Darkness &amp; Invisibility.</div>
+    </div>
+    <form method="dialog" class="dialog-actions">
+      <button type="submit" value="close" class="btn btn-crimson">Close</button>
+    </form>
+  </dialog>
+
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+  <script src="data/sparks-data.js"></script>
+  <script src="data/shops-data.js"></script>
+  <script src="engine/sparks-rules.js"></script>
+  <script src="vtt.js"></script>
+</body>
+</html>
